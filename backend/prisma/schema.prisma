@@ -1,0 +1,169 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Category {
+  PLUMBING
+  ELECTRICAL
+  INTERNET
+  INFRASTRUCTURE
+  MESS
+  CLEANING
+  SECURITY
+  OTHER
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum ComplaintStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+}
+
+enum NotificationType {
+  status_change
+  new_comment
+  complaint_created
+  assigned
+  feedback_received
+}
+
+model User {
+  id       String @id @default(uuid())
+  name     String
+  email    String @unique
+  password String
+
+  role   String  @default("student")
+  hostel String
+  room   String
+  phone  String?
+
+  createdComplaints Complaint[] @relation("CreatedComplaints")
+
+  comments Comment[]
+
+  announcements Announcement[]
+
+  notificationsReceived Notification[] @relation("NotificationsReceived")
+  notificationsSent     Notification[] @relation("NotificationsSent")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Complaint {
+  id String @id @default(cuid())
+
+  title       String
+  description String
+
+  category Category
+  priority Priority        @default(MEDIUM)
+  status   ComplaintStatus @default(PENDING)
+
+  hostel String
+  room   String
+
+  createdById String
+  createdBy   User   @relation("CreatedComplaints", fields: [createdById], references: [id], onDelete: Cascade)
+
+  images         String[]
+  resolvedImages String[]
+
+  isEscalated Boolean @default(false)
+
+  comments      Comment[]
+  feedback      Feedback?
+  notifications Notification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([category])
+  @@index([createdById])
+}
+
+model Feedback {
+  id String @id @default(cuid())
+
+  rating  Int
+  comment String?
+
+  complaintId String    @unique
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+
+  givenAt DateTime @default(now())
+}
+
+model Comment {
+  id String @id @default(cuid())
+
+  text String
+
+  complaintId String
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+model Announcement {
+  id String @id @default(cuid())
+
+  title    String @db.VarChar(100)
+  content  String
+  category String @default("Notice")
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  images String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([createdById])
+}
+
+model Notification {
+  id String @id @default(cuid())
+
+  recipientId String
+  recipient   User   @relation("NotificationsReceived", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  senderId String
+  sender   User   @relation("NotificationsSent", fields: [senderId], references: [id])
+
+  type NotificationType
+
+  complaintId String
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+
+  message String
+
+  isRead Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([recipientId])
+  @@index([senderId])
+  @@index([complaintId])
+}
