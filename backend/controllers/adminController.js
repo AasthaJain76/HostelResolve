@@ -4,7 +4,7 @@ import bcrypt from 'bcrypt';
 // 1. Create Warden Account (Admin Only)
 export const createWarden = async (req, res) => {
     try {
-        const { name, email, password, hostel, phone } = req.body;
+        const { name, email, password, hostel, phone, room } = req.body;
 
         if (!name || !email || !password || !hostel) {
             return res.status(400).json({ success: false, message: 'Required fields are missing' });
@@ -29,7 +29,7 @@ export const createWarden = async (req, res) => {
                 role: 'warden',
                 hostel,
                 phone,
-                room: 'Warden Office' // Default string for room
+                room: room || 'Warden Office'
             }
         });
 

@@ -17,6 +17,7 @@ const AdminDashboard = () => {
     const [password, setPassword] = useState('');
     const [hostel, setHostel] = useState('');
     const [phone, setPhone] = useState('');
+    const [room, setRoom] = useState('');
     const [registering, setRegistering] = useState(false);
 
     const showToast = (message, type = 'success') => {
@@ -48,7 +49,7 @@ const AdminDashboard = () => {
         e.preventDefault();
         setRegistering(true);
         try {
-            const res = await api.post('/admin/wardens', { name, email, password, hostel, phone });
+            const res = await api.post('/admin/wardens', { name, email, password, hostel, phone, room });
             if (res.data.success) {
                 showToast('Warden account created successfully!');
                 setName('');
@@ -56,6 +57,7 @@ const AdminDashboard = () => {
                 setPassword('');
                 setHostel('');
                 setPhone('');
+                setRoom('');
                 fetchAdminData();
             }
         } catch (err) {
@@ -229,6 +231,17 @@ const AdminDashboard = () => {
                                 placeholder="e.g. Aryabhata Block"
                                 value={hostel} 
                                 onChange={(e) => setHostel(e.target.value)} 
+                                required 
+                            />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Warden Office Room / Location</label>
+                            <input 
+                                type="text" 
+                                className="glass-input" 
+                                placeholder="e.g. Ground Floor Office"
+                                value={room} 
+                                onChange={(e) => setRoom(e.target.value)} 
                                 required 
                             />
                         </div>
