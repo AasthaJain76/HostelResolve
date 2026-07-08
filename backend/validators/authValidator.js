@@ -1,6 +1,6 @@
 import { body } from 'express-validator';
 
-const ROLES = ['student', 'admin'];
+const ROLES = ['student'];
 
 export const signupValidation = [
     body('name')
