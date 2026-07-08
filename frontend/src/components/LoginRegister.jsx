@@ -123,6 +123,17 @@ const LoginRegister = () => {
                         <>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Role</label>
+                                    <select 
+                                        className="glass-input" 
+                                        value={role} 
+                                        onChange={(e) => setRole(e.target.value)}
+                                    >
+                                        <option value="student">Student</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                     <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Phone Number</label>
                                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                                         <Phone size={16} style={{ position: 'absolute', left: '16px' }} color="var(--text-muted)" />
