@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import announcementService from '../services/announcementService';
 import { useAuth } from '../context/AuthContext';
-import { Megaphone, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Megaphone, Plus, Trash2, Image as ImageIcon, Pin, PinOff, Edit2 } from 'lucide-react';
 
 const NoticeBoard = () => {
     const { user } = useAuth();
@@ -13,6 +13,47 @@ const NoticeBoard = () => {
     const [images, setImages] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+
+    // Edit Notice state
+    const [editingId, setEditingId] = useState(null);
+    const [editTitle, setEditTitle] = useState('');
+    const [editContent, setEditContent] = useState('');
+    const [editCategory, setEditCategory] = useState('Notice');
+
+    const handleTogglePin = async (id) => {
+        try {
+            const data = await announcementService.togglePin(id);
+            if (data.success) {
+                fetchAnnouncements();
+            }
+        } catch (err) {
+            console.error('Failed to toggle pin:', err);
+        }
+    };
+
+    const handleEditClick = (notice) => {
+        setEditingId(notice.id);
+        setEditTitle(notice.title);
+        setEditContent(notice.content);
+        setEditCategory(notice.category);
+    };
+
+    const handleUpdate = async (e, id) => {
+        e.preventDefault();
+        try {
+            const data = await announcementService.updateAnnouncement(id, {
+                title: editTitle,
+                content: editContent,
+                category: editCategory
+            });
+            if (data.success) {
+                setEditingId(null);
+                fetchAnnouncements();
+            }
+        } catch (err) {
+            console.error('Failed to update notice:', err);
+        }
+    };
 
     const fetchAnnouncements = async () => {
         try {
@@ -160,8 +201,47 @@ const NoticeBoard = () => {
                                 </span>
                                 <span>{new Date(a.createdAt).toLocaleDateString()}</span>
                             </div>
-                            <h4 style={{ fontSize: '1rem', marginBottom: '8px', color: 'var(--text-main)' }}>{a.title}</h4>
-                            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', whiteSpace: 'pre-wrap', lineHeight: '1.4' }}>{a.content}</p>
+                            {editingId === a.id ? (
+                                <form onSubmit={(e) => handleUpdate(e, a.id)} style={{ display: 'flex', flexDirection: 'column', gap: '10px', margin: '8px 0' }}>
+                                    <input 
+                                        type="text" 
+                                        className="glass-input" 
+                                        value={editTitle} 
+                                        onChange={(e) => setEditTitle(e.target.value)} 
+                                        required 
+                                    />
+                                    <select 
+                                        className="glass-input" 
+                                        value={editCategory} 
+                                        onChange={(e) => setEditCategory(e.target.value)}
+                                    >
+                                        <option value="Notice">Notice</option>
+                                        <option value="Event">Event</option>
+                                        <option value="Mess">Mess Update</option>
+                                        <option value="Maintenance">Maintenance</option>
+                                        <option value="Urgent">Urgent Notice</option>
+                                    </select>
+                                    <textarea 
+                                        className="glass-input" 
+                                        rows="3" 
+                                        value={editContent} 
+                                        onChange={(e) => setEditContent(e.target.value)} 
+                                        required 
+                                    />
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <button type="submit" className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>Save</button>
+                                        <button type="button" className="btn btn-secondary" onClick={() => setEditingId(null)} style={{ padding: '6px 12px', fontSize: '0.8rem' }}>Cancel</button>
+                                    </div>
+                                </form>
+                            ) : (
+                                <>
+                                    <h4 style={{ fontSize: '1rem', marginBottom: '8px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        {a.title}
+                                        {a.isPinned && <Pin size={16} color="var(--primary)" fill="var(--primary)" style={{ flexShrink: 0 }} />}
+                                    </h4>
+                                    <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', whiteSpace: 'pre-wrap', lineHeight: '1.4' }}>{a.content}</p>
+                                  </>
+                            )}
                             
                             {a.images && a.images.length > 0 && (
                                 <div className="image-previews" style={{ marginTop: '10px' }}>
@@ -182,13 +262,29 @@ const NoticeBoard = () => {
                                     By: {a.createdBy?.name || 'Warden'} ({a.createdBy?.hostel || 'Hostel'})
                                 </span>
                                 {user?.role === 'warden' && (
-                                    <button 
-                                        onClick={() => handleDelete(a.id)}
-                                        style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer' }}
-                                        title="Delete notice"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
+                                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                        <button 
+                                            onClick={() => handleTogglePin(a.id)}
+                                            style={{ background: 'none', border: 'none', color: a.isPinned ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer' }}
+                                            title={a.isPinned ? "Unpin notice" : "Pin notice"}
+                                        >
+                                            {a.isPinned ? <PinOff size={16} /> : <Pin size={16} />}
+                                        </button>
+                                        <button 
+                                            onClick={() => handleEditClick(a)}
+                                            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                                            title="Edit notice"
+                                        >
+                                            <Edit2 size={16} />
+                                        </button>
+                                        <button 
+                                            onClick={() => handleDelete(a.id)}
+                                            style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer' }}
+                                            title="Delete notice"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
                                 )}
                             </div>
                         </div>

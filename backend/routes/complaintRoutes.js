@@ -12,6 +12,7 @@ import {
     deleteComplaint,
     submitFeedback,
     reopenComplaint,
+    escalateComplaint
 } from '../controllers/complaintController.js'
 
 import {protect, authorize} from '../middlewares/auth.js'
@@ -37,7 +38,7 @@ router.use(protect);
 router.get('/', getComplaintsQueryValidation, validate, getComplaints);
 router.post('/', upload.array('images', 5), createComplaintValidation, validate, createComplaint);
 
-router.get('/stats', authorize("warden"), getComplaintStats);
+router.get('/stats', getComplaintStats);
 
 router.get('/:id', complaintIdValidation, validate, getComplaintById);
 router.put('/:id', 
@@ -58,5 +59,6 @@ router.delete('/:id/comments/:commentId', deleteCommentValidation, validate, del
 router.post('/:id/upvote', complaintIdValidation, validate, upvoteComplaint);
 router.post('/:id/feedback', complaintIdValidation, feedbackValidation, validate, submitFeedback);
 router.post('/:id/reopen', complaintIdValidation, reopenComplaintValidation, validate, reopenComplaint);
+router.post('/:id/escalate', complaintIdValidation, validate, escalateComplaint);
 
 export default router;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
-import { Bell, LogOut, Sun, Moon, User, LayoutDashboard } from 'lucide-react';
+import { Bell, LogOut, Sun, Moon, User, LayoutDashboard, Calendar } from 'lucide-react';
 
 const Navbar = () => {
     const { user, logout, notifications, markNotificationRead, markAllNotificationsRead } = useAuth();
@@ -19,7 +19,11 @@ const Navbar = () => {
     const handleNotificationClick = (n) => {
         markNotificationRead(n.id);
         setShowNotifications(false);
-        navigate(`/complaint/${n.complaintId}`);
+        if (n.type === 'new_notice') {
+            navigate('/notices');
+        } else if (n.complaintId) {
+            navigate(`/complaint/${n.complaintId}`);
+        }
     };
 
     useEffect(() => {
@@ -55,6 +59,10 @@ const Navbar = () => {
                         <Link to="/" className="btn btn-secondary" style={{ padding: '8px 16px' }}>
                             <LayoutDashboard size={18} />
                             <span>Dashboard</span>
+                        </Link>
+                        <Link to="/leaves" className="btn btn-secondary" style={{ padding: '8px 16px' }}>
+                            <Calendar size={18} />
+                            <span>Leaves</span>
                         </Link>
                         <Link to="/profile" className="btn btn-secondary" style={{ padding: '8px 16px' }}>
                             <User size={18} />

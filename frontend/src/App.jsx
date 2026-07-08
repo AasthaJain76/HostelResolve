@@ -9,6 +9,8 @@ import ComplaintDetails from './components/ComplaintDetails';
 import Profile from './components/Profile';
 import RaiseComplaint from './components/RaiseComplaint';
 import NoticesPage from './components/NoticesPage';
+import LeaveManagement from './components/LeaveManagement';
+import AdminDashboard from './components/AdminDashboard';
 import './App.css';
 
 // Route guards
@@ -26,7 +28,9 @@ const PublicRoute = ({ children }) => {
 
 const DashboardSelector = () => {
     const { user } = useAuth();
-    return user.role === 'warden' ? <WardenDashboard /> : <StudentDashboard />;
+    if (user.role === 'admin') return <AdminDashboard />;
+    if (user.role === 'warden') return <WardenDashboard />;
+    return <StudentDashboard />;
 };
 
 function App() {
@@ -85,6 +89,14 @@ function App() {
                                 element={
                                     <PrivateRoute>
                                         <NoticesPage />
+                                    </PrivateRoute>
+                                } 
+                            />
+                            <Route 
+                                path="/leaves" 
+                                element={
+                                    <PrivateRoute>
+                                        <LeaveManagement />
                                     </PrivateRoute>
                                 } 
                             />

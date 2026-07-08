@@ -1,6 +1,6 @@
 import prisma from '../DB/db.config.js';
 import { createNotificationHelper } from './notificationController.js';
-
+import {sendEmail} from '../utils/sendEmail.js'
 // @desc    Create new complaint
 // @route   POST /api/complaints
 // @access  Private (Student only)
@@ -51,6 +51,29 @@ export const createComplaint = async (req, res) => {
             }
         });
 
+        // Fetch student's email and name from DB using req.user.id
+        const student = await prisma.user.findUnique({
+            where: { id: req.user.id }
+        });
+
+        if (student && student.email) {
+            const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+            const complaintLink = `${clientUrl}/complaint/${complaint.id}`;
+
+            await sendEmail(
+                student.email,
+                "Complaint Submitted",
+                `
+                <h2>Complaint Submitted Successfully</h2>
+                <p>Hello ${student.name},</p>
+                <p>Your complaint has been registered.</p>
+                <p><b>Title:</b> ${complaint.title}</p>
+                <p><b>Status:</b> Pending</p>
+                <br/>
+                <a href="${complaintLink}" style="display: inline-block; padding: 10px 20px; color: white; background-color: #4f46e5; text-decoration: none; border-radius: 6px; font-weight: bold;">View Complaint Status</a>
+                `
+            );
+        }
         // Notify wardens of this hostel
         const wardens = await prisma.user.findMany({
             where: {
@@ -96,7 +119,7 @@ export const createComplaint = async (req, res) => {
 export const getComplaints = async (req, res) => {
     try {
         const { status, category, priority, search } = req.query;
-        
+
         // Fetch current user details
         const currentUser = await prisma.user.findUnique({
             where: { id: req.user.id }
@@ -217,7 +240,10 @@ export const getComplaintById = async (req, res) => {
 export const updateComplaint = async (req, res) => {
     try {
         const complaint = await prisma.complaint.findUnique({
-            where: { id: req.params.id }
+            where: { id: req.params.id },
+            include: {
+                createdBy: true,
+            },
         });
 
         if (!complaint) {
@@ -259,6 +285,24 @@ export const updateComplaint = async (req, res) => {
                     complaint.id,
                     `Your complaint "${complaint.title}" is now marked as ${status}.`
                 );
+
+                // Send email to student
+                if (complaint.createdBy && complaint.createdBy.email) {
+                    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+                    const complaintLink = `${clientUrl}/complaint/${complaint.id}`;
+
+                    await sendEmail(
+                        complaint.createdBy.email,
+                        `Complaint Status Updated: ${status}`,
+                        `
+                        <h2>Complaint Status Updated</h2>
+                        <p>Hello ${complaint.createdBy.name},</p>
+                        <p>The status of your complaint "<b>${complaint.title}</b>" has been updated to <b>${status}</b>.</p>
+                        <br/>
+                        <a href="${complaintLink}" style="display: inline-block; padding: 10px 20px; color: white; background-color: #10b981; text-decoration: none; border-radius: 6px; font-weight: bold;">View Details</a>
+                        `
+                    );
+                }
             }
 
             return res.json({
@@ -286,7 +330,6 @@ export const updateComplaint = async (req, res) => {
                 where: { id: req.params.id },
                 data: updatedData
             });
-
             return res.json({
                 success: true,
                 message: 'Complaint updated by Student',
@@ -304,48 +347,161 @@ export const updateComplaint = async (req, res) => {
 // @desc    Get complaint stats
 // @route   GET /api/complaints/stats
 // @access  Private (Warden only)
+// @desc    Get complaint stats
+// @route   GET /api/complaints/stats
+// @access  Private
 export const getComplaintStats = async (req, res) => {
     try {
-        if (req.user.role !== 'warden') {
-            return res.status(403).json({
-                success: false,
-                message: 'Only wardens can view statistics'
+        const { role, id } = req.user;
+
+        if (role === 'student') {
+            const complaintStats = await prisma.complaint.groupBy({
+                by: ['status'],
+                where: { createdById: id },
+                _count: { id: true }
             });
+
+            const totalLeaves = await prisma.leaveRequest.count({
+                where: { studentId: id }
+            });
+
+            const stats = {
+                totalComplaints: 0,
+                pendingComplaints: 0,
+                resolvedComplaints: 0,
+                totalLeaves
+            };
+
+            complaintStats.forEach(item => {
+                const count = item._count.id;
+                stats.totalComplaints += count;
+                if (item.status === 'PENDING') stats.pendingComplaints += count;
+                if (item.status === 'RESOLVED') stats.resolvedComplaints += count;
+            });
+
+            return res.json({ success: true, data: stats });
+
+        } else if (role === 'warden') {
+            const warden = await prisma.user.findUnique({
+                where: { id }
+            });
+
+            const statusStats = await prisma.complaint.groupBy({
+                by: ['status'],
+                where: { hostel: warden.hostel },
+                _count: { id: true }
+            });
+
+            const categoryStats = await prisma.complaint.groupBy({
+                by: ['category'],
+                where: { hostel: warden.hostel },
+                _count: { id: true }
+            });
+
+            const priorityStats = await prisma.complaint.groupBy({
+                by: ['priority'],
+                where: { hostel: warden.hostel },
+                _count: { id: true }
+            });
+
+            const stats = {
+                total: 0,
+                pending: 0,
+                inProgress: 0,
+                resolved: 0,
+                rejected: 0,
+                categories: {},
+                priorities: {}
+            };
+
+            statusStats.forEach(item => {
+                const count = item._count.id;
+                stats.total += count;
+                if (item.status === 'PENDING') stats.pending = count;
+                if (item.status === 'IN_PROGRESS') stats.inProgress = count;
+                if (item.status === 'RESOLVED') stats.resolved = count;
+                if (item.status === 'REJECTED') stats.rejected = count;
+            });
+
+            categoryStats.forEach(item => {
+                stats.categories[item.category] = item._count.id;
+            });
+
+            priorityStats.forEach(item => {
+                stats.priorities[item.priority] = item._count.id;
+            });
+
+            return res.json({ success: true, data: stats });
         }
 
-        const warden = await prisma.user.findUnique({
-            where: { id: req.user.id }
+        res.status(400).json({ success: false, message: 'Invalid role for statistics' });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// @desc    Escalate complaint
+// @route   POST /api/complaints/:id/escalate
+// @access  Private (Student only)
+export const escalateComplaint = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const complaint = await prisma.complaint.findUnique({
+            where: { id },
+            include: { createdBy: true }
         });
 
-        // Fetch counts
-        const allComplaints = await prisma.complaint.findMany({
-            where: { hostel: warden.hostel }
+        if (!complaint) {
+            return res.status(404).json({ success: false, message: 'Complaint not found' });
+        }
+
+        if (complaint.createdById !== req.user.id) {
+            return res.status(403).json({ success: false, message: 'Not authorized to escalate this complaint' });
+        }
+
+        const updatedComplaint = await prisma.complaint.update({
+            where: { id },
+            data: { isEscalated: true }
         });
 
-        const stats = {
-            total: allComplaints.length,
-            pending: allComplaints.filter(c => c.status === 'PENDING').length,
-            inProgress: allComplaints.filter(c => c.status === 'IN_PROGRESS').length,
-            resolved: allComplaints.filter(c => c.status === 'RESOLVED').length,
-            rejected: allComplaints.filter(c => c.status === 'REJECTED').length,
-            categories: {},
-            priorities: {}
-        };
+        // Notify admins in-app and by email
+        const admins = await prisma.user.findMany({ where: { role: 'admin' } });
+        
+        Promise.all(admins.map(async (admin) => {
+            try {
+                await createNotificationHelper(
+                    admin.id,
+                    req.user.id,
+                    'status_change',
+                    complaint.id,
+                    `Complaint "${complaint.title}" has been escalated by ${complaint.createdBy.name}`
+                );
 
-        allComplaints.forEach(c => {
-            stats.categories[c.category] = (stats.categories[c.category] || 0) + 1;
-            stats.priorities[c.priority] = (stats.priorities[c.priority] || 0) + 1;
-        });
+                if (admin.email) {
+                    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+                    const link = `${clientUrl}/complaint/${complaint.id}`;
+                    await sendEmail(
+                        admin.email,
+                        `Complaint Escalation Alert: ${complaint.title}`,
+                        `
+                        <h2>Complaint Escalated</h2>
+                        <p><b>Complaint:</b> ${complaint.title}</p>
+                        <p><b>Raised By:</b> ${complaint.createdBy.name} (Room ${complaint.createdBy.room})</p>
+                        <p><b>Hostel:</b> ${complaint.hostel}</p>
+                        <br/>
+                        <a href="${link}" style="display: inline-block; padding: 10px 20px; color: white; background-color: #ef4444; text-decoration: none; border-radius: 6px; font-weight: bold;">View Details</a>
+                        `
+                    );
+                }
+            } catch (err) {
+                console.error("Failed to notify admin of escalation in background:", err);
+            }
+        })).catch(err => console.error("Error in background admin escalation notifications:", err));
 
-        res.json({
-            success: true,
-            data: stats
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
+        res.json({ success: true, message: 'Complaint escalated to Admin successfully', data: updatedComplaint });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
     }
 };
 

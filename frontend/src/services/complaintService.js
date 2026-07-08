@@ -6,9 +6,7 @@ const complaintService = {
         return res.data;
     },
     createComplaint: async (formData) => {
-        const res = await api.post('/complaints', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        const res = await api.post('/complaints', formData);
         return res.data;
     },
     getComplaintById: async (id) => {
@@ -16,9 +14,7 @@ const complaintService = {
         return res.data;
     },
     updateComplaint: async (id, formData) => {
-        const res = await api.put(`/complaints/${id}`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        const res = await api.put(`/complaints/${id}`, formData);
         return res.data;
     },
     deleteComplaint: async (id) => {
@@ -43,6 +39,10 @@ const complaintService = {
     },
     reopenComplaint: async (id, reason) => {
         const res = await api.post(`/complaints/${id}/reopen`, { reason });
+        return res.data;
+    },
+    escalateComplaint: async (id) => {
+        const res = await api.post(`/complaints/${id}/escalate`);
         return res.data;
     }
 };

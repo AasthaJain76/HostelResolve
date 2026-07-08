@@ -1,7 +1,6 @@
 import bcrypt from "bcrypt";
 import jwt from 'jsonwebtoken';
 import prisma from '../DB/db.config.js'
-// Make sure you are importing express-rate-limit for rate limiting
 import rateLimit from "express-rate-limit";
 
 // Signup controller
@@ -23,7 +22,6 @@ export const signup = async (req, res) => {
 
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
-
         // Create user in DB
         const newUser = await prisma.user.create({
             data: {
@@ -94,11 +92,17 @@ export const login = async (req, res) => {
                 message: "Invalid email or password",
             });
         }
-
+        
         // Generate tokens
         const accessToken = generateAccessToken(user.id, user.role);
         const refreshToken = generateRefreshToken(user.id, user.role);
 
+        // --- DIAGNOSTIC LOGS ---
+        console.log("=== LOGIN DEBUG ===");
+        console.log("Access Token Length:", accessToken ? accessToken.length : "UNDEFINED");
+        console.log("Refresh Token Length:", refreshToken ? refreshToken.length : "UNDEFINED");
+        console.log("NODE_ENV value:", process.env.NODE_ENV);
+        console.log("====================");
         // Remove password before sending user object in response
         const { password: _, ...userResponse } = user;
 
@@ -188,7 +192,7 @@ export const updateProfile = async (req, res) => {
         });
 
         const { password: _, ...userResponse } = updatedUser;
-
+        
         res.status(200).json({
             success: true,
             message: "User updated successfully",
@@ -284,6 +288,7 @@ export const logout = async (req, res) => {
         sameSite: "strict",
         secure: process.env.NODE_ENV === "production",
     });
+
     return res.status(200).json({
         success: true,
         message: "Logged out successfully"
@@ -306,3 +311,4 @@ const generateRefreshToken = (id, role) => {
         { expiresIn: "7d" },
     );
 };
+

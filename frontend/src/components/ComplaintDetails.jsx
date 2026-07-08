@@ -4,7 +4,7 @@ import complaintService from '../services/complaintService';
 import { useAuth } from '../context/AuthContext';
 import { 
     ArrowLeft, Calendar, User, Home, Phone, Star, 
-    Send, Trash2, CheckCircle2, ShieldCheck, HelpCircle
+    Send, Trash2, CheckCircle2, ShieldCheck, HelpCircle, AlertTriangle
 } from 'lucide-react';
 
 const ComplaintDetails = () => {
@@ -34,6 +34,7 @@ const ComplaintDetails = () => {
     const [reopenReason, setReopenReason] = useState('');
     const [showReopenForm, setShowReopenForm] = useState(false);
     const [submittingReopen, setSubmittingReopen] = useState(false);
+    const [submittingEscalate, setSubmittingEscalate] = useState(false);
 
     const showToast = (message, type = 'success') => {
         setToast({ message, type });
@@ -148,6 +149,22 @@ const ComplaintDetails = () => {
             showToast('Failed to reopen complaint.', 'error');
         } finally {
             setSubmittingReopen(false);
+        }
+    };
+
+    const handleEscalate = async () => {
+        if (!window.confirm("Are you sure you want to escalate this complaint to the Admin?")) return;
+        setSubmittingEscalate(true);
+        try {
+            const data = await complaintService.escalateComplaint(id);
+            if (data.success) {
+                showToast('Complaint escalated to Admin successfully!');
+                fetchComplaint(); // Reload data
+            }
+        } catch (err) {
+            showToast(err.response?.data?.message || 'Failed to escalate complaint.', 'error');
+        } finally {
+            setSubmittingEscalate(false);
         }
     };
 
@@ -455,6 +472,40 @@ const ComplaintDetails = () => {
                                     "{complaint.feedback.comment}"
                                 </p>
                             )}
+                        </div>
+                    )}
+
+                    {/* Student Escalation Panel */}
+                    {user?.role === 'student' && ['PENDING', 'IN_PROGRESS'].includes(complaint.status) && !complaint.isEscalated && (
+                        <div className="glass-panel" style={{ padding: '24px', marginBottom: '16px' }}>
+                            <h3 style={{ fontSize: '1.1rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <AlertTriangle size={20} color="var(--danger)" />
+                                Escalate to Admin?
+                            </h3>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                                If the Warden is not responding or taking too long to solve this issue, you can escalate this complaint directly to the Admin.
+                            </p>
+                            <button 
+                                className="btn btn-secondary" 
+                                style={{ width: '100%', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', border: '1px solid var(--danger-glow)' }}
+                                onClick={handleEscalate}
+                                disabled={submittingEscalate}
+                            >
+                                {submittingEscalate ? 'Escalating...' : 'Escalate Complaint'}
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Escalated Status Box */}
+                    {user?.role === 'student' && complaint.isEscalated && (
+                        <div className="glass-panel" style={{ padding: '24px', borderLeft: '3px solid var(--danger)', marginBottom: '16px' }}>
+                            <h3 style={{ fontSize: '1.1rem', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <AlertTriangle size={20} color="var(--danger)" />
+                                Escalated to Admin
+                            </h3>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                                This complaint has been escalated to the Admin. They will step in and review the issue.
+                            </p>
                         </div>
                     )}
 
