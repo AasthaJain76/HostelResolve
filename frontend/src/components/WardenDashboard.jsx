@@ -128,6 +128,42 @@ const WardenDashboard = () => {
                 </div>
             </div>
 
+            {/* Category Workload Chart */}
+            <div className="glass-panel" style={{ padding: '24px' }}>
+                <h3 style={{ fontSize: '1.1rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <BarChart3 size={18} color="var(--primary)" />
+                    Workload Category Distribution
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+                    {categories.map(c => {
+                        const count = stats.categories?.[c] || 0;
+                        const maxCount = Math.max(...categories.map(cat => stats.categories?.[cat] || 0), 1);
+                        const pct = (count / maxCount) * 100;
+
+                        return (
+                            <div key={c} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                                    <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{c}</span>
+                                    <span style={{ color: 'var(--text-muted)' }}>{count} {count === 1 ? 'complaint' : 'complaints'}</span>
+                                </div>
+                                <div style={{ height: '8px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                                    <div 
+                                        style={{ 
+                                            height: '100%', 
+                                            width: `${pct}%`, 
+                                            background: count > 0 ? 'var(--primary)' : 'transparent',
+                                            borderRadius: '4px',
+                                            transition: 'width 0.5s ease-in-out',
+                                            boxShadow: count > 0 ? '0 0 8px var(--primary-glow)' : 'none'
+                                        }} 
+                                    />
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
             {/* Complaints list */}
             <div className="glass-panel" style={{ padding: '24px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>

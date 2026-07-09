@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api';
-import { Shield, Users, UserCheck, AlertOctagon, FileText, CheckCircle2 } from 'lucide-react';
+import { Shield, Users, UserCheck, AlertOctagon, FileText, CheckCircle2, BarChart3 } from 'lucide-react';
 
 const AdminDashboard = () => {
     const { logout } = useAuth();
@@ -133,6 +133,46 @@ const AdminDashboard = () => {
                         <span style={{ fontSize: '0.8rem', color: stats.totalEscalated > 0 ? 'var(--danger)' : 'var(--text-muted)' }}>Escalations</span>
                         <h3 style={{ fontSize: '1.4rem', color: stats.totalEscalated > 0 ? 'var(--danger)' : 'var(--text-main)', marginTop: '4px' }}>{stats.totalEscalated}</h3>
                     </div>
+                </div>
+            </div>
+
+            {/* Hostel-wise Complaint Distribution */}
+            <div className="glass-panel" style={{ padding: '24px' }}>
+                <h3 style={{ fontSize: '1.1rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <BarChart3 size={18} color="var(--primary)" />
+                    Hostel Block Complaint Distribution
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {!stats.hostelStats || stats.hostelStats.length === 0 ? (
+                        <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', padding: '10px 0' }}>No complaints recorded in any hostel block yet.</p>
+                    ) : (
+                        stats.hostelStats.map(h => {
+                            const count = h._count.id;
+                            const maxCount = Math.max(...stats.hostelStats.map(item => item._count.id), 1);
+                            const pct = (count / maxCount) * 100;
+
+                            return (
+                                <div key={h.hostel} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                                        <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{h.hostel}</span>
+                                        <span style={{ color: 'var(--text-muted)' }}>{count} {count === 1 ? 'complaint' : 'complaints'}</span>
+                                    </div>
+                                    <div style={{ height: '10px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '5px', overflow: 'hidden' }}>
+                                        <div 
+                                            style={{ 
+                                                height: '100%', 
+                                                width: `${pct}%`, 
+                                                background: 'var(--primary)',
+                                                borderRadius: '5px',
+                                                transition: 'width 0.5s ease-in-out',
+                                                boxShadow: '0 0 8px var(--primary-glow)'
+                                            }} 
+                                        />
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
                 </div>
             </div>
 

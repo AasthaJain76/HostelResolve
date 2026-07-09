@@ -47,9 +47,15 @@ export const getAdminStats = async (req, res) => {
         const totalComplaints = await prisma.complaint.count();
         const totalEscalated = await prisma.complaint.count({ where: { isEscalated: true } });
 
+        // Hostel-wise complaints comparison
+        const hostelStats = await prisma.complaint.groupBy({
+            by: ['hostel'],
+            _count: { id: true }
+        });
+
         res.json({
             success: true,
-            data: { totalStudents, totalWardens, totalComplaints, totalEscalated }
+            data: { totalStudents, totalWardens, totalComplaints, totalEscalated, hostelStats }
         });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });

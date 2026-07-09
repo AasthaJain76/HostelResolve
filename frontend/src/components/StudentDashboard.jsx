@@ -2,11 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import complaintService from '../services/complaintService';
 import ComplaintCard from './ComplaintCard';
-import { PlusCircle, Megaphone, Search, SlidersHorizontal, AlertCircle } from 'lucide-react';
+import { PlusCircle, Megaphone, Search, SlidersHorizontal, AlertCircle, Clock, CheckCircle2, Calendar, FileText } from 'lucide-react';
 
 const StudentDashboard = () => {
     const [complaints, setComplaints] = useState([]);
     const [loadingComplaints, setLoadingComplaints] = useState(true);
+    const [stats, setStats] = useState({
+        totalComplaints: 0,
+        pendingComplaints: 0,
+        resolvedComplaints: 0,
+        totalLeaves: 0
+    });
+    const [loadingStats, setLoadingStats] = useState(true);
 
     // Filters
     const [statusFilter, setStatusFilter] = useState('');
@@ -14,6 +21,20 @@ const StudentDashboard = () => {
     const [search, setSearch] = useState('');
 
     const categories = ['PLUMBING', 'ELECTRICAL', 'INTERNET', 'INFRASTRUCTURE', 'MESS', 'CLEANING', 'SECURITY', 'OTHER'];
+
+    const fetchStats = async () => {
+        setLoadingStats(true);
+        try {
+            const data = await complaintService.getStats();
+            if (data.success) {
+                setStats(data.data);
+            }
+        } catch (err) {
+            console.error('Failed to fetch statistics:', err);
+        } finally {
+            setLoadingStats(false);
+        }
+    };
 
     const fetchComplaints = async () => {
         setLoadingComplaints(true);
@@ -33,6 +54,10 @@ const StudentDashboard = () => {
             setLoadingComplaints(false);
         }
     };
+
+    useEffect(() => {
+        fetchStats();
+    }, []);
 
     useEffect(() => {
         fetchComplaints();
@@ -61,6 +86,49 @@ const StudentDashboard = () => {
                         <Megaphone size={18} />
                         View Notice Board
                     </Link>
+                </div>
+            </div>
+
+            {/* Student Stats Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+                <div className="glass-panel" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ padding: '12px', background: 'rgba(79, 70, 229, 0.1)', borderRadius: '12px' }}>
+                        <FileText size={22} color="var(--primary)" />
+                    </div>
+                    <div>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>My Complaints</span>
+                        <h3 style={{ fontSize: '1.3rem', color: 'var(--text-main)', marginTop: '4px' }}>{stats.totalComplaints}</h3>
+                    </div>
+                </div>
+
+                <div className="glass-panel" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', borderBottom: '3px solid var(--warning)' }}>
+                    <div style={{ padding: '12px', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '12px' }}>
+                        <Clock size={22} color="var(--warning)" />
+                    </div>
+                    <div>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Pending</span>
+                        <h3 style={{ fontSize: '1.3rem', color: 'var(--warning)', marginTop: '4px' }}>{stats.pendingComplaints}</h3>
+                    </div>
+                </div>
+
+                <div className="glass-panel" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', borderBottom: '3px solid var(--success)' }}>
+                    <div style={{ padding: '12px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '12px' }}>
+                        <CheckCircle2 size={22} color="var(--success)" />
+                    </div>
+                    <div>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Resolved</span>
+                        <h3 style={{ fontSize: '1.3rem', color: 'var(--success)', marginTop: '4px' }}>{stats.resolvedComplaints}</h3>
+                    </div>
+                </div>
+
+                <div className="glass-panel" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', borderBottom: '3px solid var(--info)' }}>
+                    <div style={{ padding: '12px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '12px' }}>
+                        <Calendar size={22} color="var(--info)" />
+                    </div>
+                    <div>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Leaves</span>
+                        <h3 style={{ fontSize: '1.3rem', color: 'var(--info)', marginTop: '4px' }}>{stats.totalLeaves}</h3>
+                    </div>
                 </div>
             </div>
 
