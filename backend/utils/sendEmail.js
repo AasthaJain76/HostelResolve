@@ -3,8 +3,8 @@ import nodemailer from "nodemailer";
 const transporter = nodemailer.createTransport({
     service: "gmail",
     host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
+    port: 587,
+    secure: false,
     // Forces IPv4 connection to prevent ENETUNREACH errors on cloud servers like Render
     family: 4,
     auth: {
