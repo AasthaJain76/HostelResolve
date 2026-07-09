@@ -60,7 +60,7 @@ export const createComplaint = async (req, res) => {
             const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
             const complaintLink = `${clientUrl}/complaint/${complaint.id}`;
 
-            await sendEmail(
+            sendEmail(
                 student.email,
                 "Complaint Submitted",
                 `
@@ -72,7 +72,7 @@ export const createComplaint = async (req, res) => {
                 <br/>
                 <a href="${complaintLink}" style="display: inline-block; padding: 10px 20px; color: white; background-color: #4f46e5; text-decoration: none; border-radius: 6px; font-weight: bold;">View Complaint Status</a>
                 `
-            );
+            ).catch(err => console.error("Error sending complaint confirmation email in background:", err));
         }
         // Notify wardens of this hostel
         const wardens = await prisma.user.findMany({
@@ -278,31 +278,37 @@ export const updateComplaint = async (req, res) => {
 
             // Notify student
             if (status) {
-                await createNotificationHelper(
-                    complaint.createdById,
-                    currentUser.id,
-                    'status_change',
-                    complaint.id,
-                    `Your complaint "${complaint.title}" is now marked as ${status}.`
-                );
+                // Dispatch notification & email in the background
+                (async () => {
+                    try {
+                        await createNotificationHelper(
+                            complaint.createdById,
+                            currentUser.id,
+                            'status_change',
+                            complaint.id,
+                            `Your complaint "${complaint.title}" is now marked as ${status}.`
+                        );
 
-                // Send email to student
-                if (complaint.createdBy && complaint.createdBy.email) {
-                    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
-                    const complaintLink = `${clientUrl}/complaint/${complaint.id}`;
+                        if (complaint.createdBy && complaint.createdBy.email) {
+                            const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+                            const complaintLink = `${clientUrl}/complaint/${complaint.id}`;
 
-                    await sendEmail(
-                        complaint.createdBy.email,
-                        `Complaint Status Updated: ${status}`,
-                        `
-                        <h2>Complaint Status Updated</h2>
-                        <p>Hello ${complaint.createdBy.name},</p>
-                        <p>The status of your complaint "<b>${complaint.title}</b>" has been updated to <b>${status}</b>.</p>
-                        <br/>
-                        <a href="${complaintLink}" style="display: inline-block; padding: 10px 20px; color: white; background-color: #10b981; text-decoration: none; border-radius: 6px; font-weight: bold;">View Details</a>
-                        `
-                    );
-                }
+                            await sendEmail(
+                                complaint.createdBy.email,
+                                `Complaint Status Updated: ${status}`,
+                                `
+                                <h2>Complaint Status Updated</h2>
+                                <p>Hello ${complaint.createdBy.name},</p>
+                                <p>The status of your complaint "<b>${complaint.title}</b>" has been updated to <b>${status}</b>.</p>
+                                <br/>
+                                <a href="${complaintLink}" style="display: inline-block; padding: 10px 20px; color: white; background-color: #10b981; text-decoration: none; border-radius: 6px; font-weight: bold;">View Details</a>
+                                `
+                            );
+                        }
+                    } catch (err) {
+                        console.error("Failed to notify student of status update in background:", err);
+                    }
+                })();
             }
 
             return res.json({
