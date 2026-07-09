@@ -1,32 +1,35 @@
 export const sendEmail = async (to, subject, html) => {
     try {
-        const apiKey = process.env.RESEND_API_KEY;
+        const apiKey = process.env.BREVO_API_KEY;
+        const senderEmail = process.env.SENDER_EMAIL || "aasthajain7499@gmail.com";
+
         if (!apiKey) {
-            console.error("Resend API Key is missing");
+            console.error("Brevo API Key is missing");
             return;
         }
 
-        const response = await fetch("https://api.resend.com/emails", {
+        const response = await fetch("https://api.brevo.com/v3/smtp/email", {
             method: "POST",
             headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${apiKey}`
+                "accept": "application/json",
+                "api-key": apiKey,
+                "content-type": "application/json"
             },
             body: JSON.stringify({
-                from: "ResolveHub <onboarding@resend.dev>",
-                to: [to],
+                sender: { name: "ResolveHub", email: senderEmail },
+                to: [{ email: to }],
                 subject: subject,
-                html: html
+                htmlContent: html
             })
         });
 
         const data = await response.json();
         if (response.ok) {
-            console.log("Email sent successfully via Resend API:", data.id);
+            console.log(`Email successfully sent to ${to} via Brevo API:`, data.messageId);
         } else {
-            console.error("Resend API error:", data);
+            console.error("Brevo API error:", data);
         }
     } catch (error) {
-        console.error("Email sending failed via Resend API:", error);
+        console.error("Email sending failed via Brevo API:", error);
     }
 };
