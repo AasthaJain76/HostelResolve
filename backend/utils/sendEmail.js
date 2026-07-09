@@ -1,29 +1,32 @@
-import nodemailer from "nodemailer";
-
-const transporter = nodemailer.createTransport({
-    service: "gmail",
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false,
-    // Forces IPv4 connection to prevent ENETUNREACH errors on cloud servers like Render
-    family: 4,
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-});
-
 export const sendEmail = async (to, subject, html) => {
     try {
-        await transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to,
-            subject,
-            html,
+        const apiKey = process.env.RESEND_API_KEY;
+        if (!apiKey) {
+            console.error("Resend API Key is missing");
+            return;
+        }
+
+        const response = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                from: "ResolveHub <onboarding@resend.dev>",
+                to: [to],
+                subject: subject,
+                html: html
+            })
         });
 
-        console.log("Email sent successfully");
+        const data = await response.json();
+        if (response.ok) {
+            console.log("Email sent successfully via Resend API:", data.id);
+        } else {
+            console.error("Resend API error:", data);
+        }
     } catch (error) {
-        console.error("Email sending failed:", error);
+        console.error("Email sending failed via Resend API:", error);
     }
 };
