@@ -93,6 +93,7 @@ model Complaint {
   comments      Comment[]
   feedback      Feedback?
   notifications Notification[]
+  history       ComplaintHistory[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -201,4 +202,16 @@ model LeaveRequest {
 
   @@index([status])
   @@index([studentId])
+}
+
+model ComplaintHistory {
+  id          String   @id @default(uuid())
+  complaintId String
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  action      String   // e.g. "CREATED", "STATUS_CHANGE", "COMMENT_ADDED", "ESCALATED", "RESOLVED"
+  details     String
+  performedBy String
+  createdAt   DateTime @default(now())
+
+  @@index([complaintId])
 }

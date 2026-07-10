@@ -1,6 +1,22 @@
 import prisma from '../DB/db.config.js';
 import { createNotificationHelper } from './notificationController.js';
 import {sendEmail} from '../utils/sendEmail.js'
+
+// Helper to log audit trail events
+const logComplaintHistory = async (complaintId, action, details, performedBy) => {
+    try {
+        await prisma.complaintHistory.create({
+            data: {
+                complaintId,
+                action,
+                details,
+                performedBy
+            }
+        });
+    } catch (err) {
+        console.error("Failed to write to audit trail:", err);
+    }
+};
 // @desc    Create new complaint
 // @route   POST /api/complaints
 // @access  Private (Student only)
@@ -55,6 +71,16 @@ export const createComplaint = async (req, res) => {
         const student = await prisma.user.findUnique({
             where: { id: req.user.id }
         });
+
+        // Log history
+        if (student) {
+            await logComplaintHistory(
+                complaint.id,
+                'CREATED',
+                `Complaint raised with priority "${priority || 'MEDIUM'}"`,
+                student.name
+            );
+        }
 
         if (student && student.email) {
             const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
@@ -192,7 +218,10 @@ export const getComplaintById = async (req, res) => {
                     },
                     orderBy: { createdAt: 'asc' }
                 },
-                feedback: true
+                feedback: true,
+                history: {
+                    orderBy: { createdAt: 'asc' }
+                }
             }
         });
 
@@ -276,6 +305,16 @@ export const updateComplaint = async (req, res) => {
                 data: updatedData
             });
 
+            // Log history
+            if (status && status !== complaint.status) {
+                await logComplaintHistory(
+                    complaint.id,
+                    'STATUS_CHANGE',
+                    `Status updated from ${complaint.status} to ${status}`,
+                    currentUser.name
+                );
+            }
+
             // Notify student
             if (status) {
                 // Dispatch notification & email in the background
@@ -336,6 +375,23 @@ export const updateComplaint = async (req, res) => {
                 where: { id: req.params.id },
                 data: updatedData
             });
+
+            // Log history
+            let changeDetails = [];
+            if (title && title !== complaint.title) changeDetails.push('title');
+            if (description && description !== complaint.description) changeDetails.push('description');
+            if (category && category !== complaint.category) changeDetails.push('category');
+            if (priority && priority !== complaint.priority) changeDetails.push('priority');
+
+            if (changeDetails.length > 0) {
+                await logComplaintHistory(
+                    complaint.id,
+                    'TICKET_UPDATED',
+                    `Updated: ${changeDetails.join(', ')}`,
+                    currentUser.name
+                );
+            }
+
             return res.json({
                 success: true,
                 message: 'Complaint updated by Student',
@@ -471,6 +527,14 @@ export const escalateComplaint = async (req, res) => {
             data: { isEscalated: true }
         });
 
+        // Log history
+        await logComplaintHistory(
+            id,
+            'ESCALATED',
+            `Complaint escalated to Admin due to lack of resolution`,
+            complaint.createdBy.name
+        );
+
         // Notify admins in-app and by email
         const admins = await prisma.user.findMany({ where: { role: 'admin' } });
         
@@ -538,6 +602,14 @@ export const addComment = async (req, res) => {
                 user: { select: { name: true, role: true } }
             }
         });
+
+        // Log history
+        await logComplaintHistory(
+            complaint.id,
+            'COMMENT_ADDED',
+            `Added comment: "${text.length > 30 ? text.substring(0, 30) + '...' : text}"`,
+            comment.user.name
+        );
 
         // Notify other party
         if (req.user.role === 'student') {
@@ -727,6 +799,15 @@ export const submitFeedback = async (req, res) => {
                 complaintId: req.params.id
             }
         });
+
+        // Log history
+        const student = await prisma.user.findUnique({ where: { id: req.user.id } });
+        await logComplaintHistory(
+            complaint.id,
+            'FEEDBACK_SUBMITTED',
+            `Feedback submitted. Rating: ${rating}/5. Comment: "${comment || 'None'}"`,
+            student.name
+        );
 
         // Automatically resolve / close status if not already
         await prisma.complaint.update({

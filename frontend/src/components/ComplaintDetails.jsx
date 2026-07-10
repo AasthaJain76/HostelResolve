@@ -280,25 +280,38 @@ const ComplaintDetails = () => {
                         )}
                     </div>
 
-                    {/* Timeline Tracker */}
+                    {/* Dynamic Audit Trail Timeline */}
                     <div className="glass-panel" style={{ padding: '24px' }}>
-                        <h3 style={{ fontSize: '1.1rem', marginBottom: '16px' }}>Complaint Timeline</h3>
-                        <div className="timeline">
-                            <div className="timeline-item">
-                                <div className="timeline-dot active"></div>
-                                <strong style={{ fontSize: '0.9rem' }}>Filed</strong>
-                                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Complaint successfully raised by student</p>
-                            </div>
-                            <div className="timeline-item">
-                                <div className={`timeline-dot ${complaint.status !== 'PENDING' ? 'active' : ''}`}></div>
-                                <strong style={{ fontSize: '0.9rem' }}>Under Review / In Progress</strong>
-                                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Warden reviewing or resolving issue</p>
-                            </div>
-                            <div className="timeline-item">
-                                <div className={`timeline-dot ${['RESOLVED', 'REJECTED'].includes(complaint.status) ? 'active' : ''}`}></div>
-                                <strong style={{ fontSize: '0.9rem' }}>Resolved / Rejected</strong>
-                                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Final decision made by Warden</p>
-                            </div>
+                        <h3 style={{ fontSize: '1.1rem', marginBottom: '20px', color: 'var(--text-main)' }}>Complaint History & Audit Trail</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', position: 'relative', paddingLeft: '20px', borderLeft: '2px solid var(--border-color)', margin: '10px 0 10px 10px' }}>
+                            {!complaint.history || complaint.history.length === 0 ? (
+                                <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>No history logs recorded.</p>
+                            ) : (
+                                complaint.history.map((item) => (
+                                    <div key={item.id} style={{ position: 'relative' }}>
+                                        {/* Glowing Timeline Node */}
+                                        <div 
+                                            style={{ 
+                                                position: 'absolute', 
+                                                left: '-27px', 
+                                                top: '4px', 
+                                                width: '12px', 
+                                                height: '12px', 
+                                                borderRadius: '50%', 
+                                                background: item.action === 'RESOLVED' || item.action === 'FEEDBACK_SUBMITTED' ? 'var(--success)' : item.action === 'ESCALATED' ? 'var(--danger)' : 'var(--primary)',
+                                                boxShadow: item.action === 'RESOLVED' || item.action === 'FEEDBACK_SUBMITTED' ? '0 0 8px var(--success)' : item.action === 'ESCALATED' ? '0 0 8px var(--danger)' : '0 0 8px var(--primary-glow)'
+                                            }} 
+                                        />
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+                                            <strong style={{ fontSize: '0.9rem', color: 'var(--text-main)' }}>{item.details}</strong>
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(item.createdAt).toLocaleString()}</span>
+                                        </div>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                            Action: <span style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.75rem' }}>{item.action}</span> by <strong>{item.performedBy}</strong>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
 
