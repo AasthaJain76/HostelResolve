@@ -1,4 +1,4 @@
-# ResolveHub - Hostel Complaint & Leave Management System
+# HostelResolve - Hostel Complaint & Leave Management System
 
 An enterprise-grade, full-stack hostel administration and complaint resolution web application designed to streamline student-warden workflows and automate feedback loops.
 
@@ -6,7 +6,7 @@ An enterprise-grade, full-stack hostel administration and complaint resolution w
 
 ## 🗺️ System Architecture
 
-The following diagram illustrates the complete data flow and network routing of ResolveHub:
+The following diagram illustrates the complete data flow and network routing of HostelResolve:
 
 ```mermaid
 graph TD
