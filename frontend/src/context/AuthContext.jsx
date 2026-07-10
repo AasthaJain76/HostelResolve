@@ -124,6 +124,18 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const changePassword = async (currentPassword, newPassword) => {
+        try {
+            const data = await authService.changePassword(currentPassword, newPassword);
+            return { success: true, message: data.message };
+        } catch (err) {
+            return {
+                success: false,
+                message: err.response?.data?.message || 'Failed to change password.'
+            };
+        }
+    };
+
     const markNotificationRead = async (id) => {
         try {
             const data = await notificationService.markAsRead(id);
@@ -157,6 +169,7 @@ export const AuthProvider = ({ children }) => {
             register,
             logout,
             updateProfile,
+            changePassword,
             fetchNotifications,
             markNotificationRead,
             markAllNotificationsRead,

@@ -20,6 +20,10 @@ const StudentDashboard = () => {
     const [categoryFilter, setCategoryFilter] = useState('');
     const [search, setSearch] = useState('');
 
+    // Pagination
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+
     const categories = ['PLUMBING', 'ELECTRICAL', 'INTERNET', 'INFRASTRUCTURE', 'MESS', 'CLEANING', 'SECURITY', 'OTHER'];
 
     const fetchStats = async () => {
@@ -36,10 +40,12 @@ const StudentDashboard = () => {
         }
     };
 
-    const fetchComplaints = async () => {
+    const fetchComplaints = async (resetPage = false) => {
+        const currentPage = resetPage ? 1 : page;
+        if (resetPage) setPage(1);
         setLoadingComplaints(true);
         try {
-            const params = {};
+            const params = { page: currentPage, limit: 5 }; // Show 5 complaints per page
             if (statusFilter) params.status = statusFilter;
             if (categoryFilter) params.category = categoryFilter;
             if (search) params.search = search;
@@ -47,6 +53,7 @@ const StudentDashboard = () => {
             const data = await complaintService.getComplaints(params);
             if (data.success) {
                 setComplaints(data.data);
+                setTotalPages(data.pagination?.totalPages || 1);
             }
         } catch (err) {
             console.error('Failed to fetch complaints:', err);
@@ -60,12 +67,16 @@ const StudentDashboard = () => {
     }, []);
 
     useEffect(() => {
-        fetchComplaints();
+        fetchComplaints(true);
     }, [statusFilter, categoryFilter]);
+
+    useEffect(() => {
+        fetchComplaints(false);
+    }, [page]);
 
     const handleSearch = (e) => {
         e.preventDefault();
-        fetchComplaints();
+        fetchComplaints(true);
     };
 
     return (
@@ -195,6 +206,31 @@ const StudentDashboard = () => {
                         ))
                     )}
                 </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
+                        <button 
+                            className="btn btn-secondary" 
+                            style={{ padding: '6px 12px', fontSize: '0.85rem' }} 
+                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                            disabled={page === 1}
+                        >
+                            Previous
+                        </button>
+                        <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                            Page <strong>{page}</strong> of <strong>{totalPages}</strong>
+                        </span>
+                        <button 
+                            className="btn btn-secondary" 
+                            style={{ padding: '6px 12px', fontSize: '0.85rem' }} 
+                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                            disabled={page === totalPages}
+                        >
+                            Next
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );

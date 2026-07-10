@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { User, Phone, Home, Mail, Save, Edit, Shield, Hash, X } from 'lucide-react';
 
 const Profile = () => {
-    const { user, updateProfile } = useAuth();
+    const { user, updateProfile, changePassword } = useAuth();
     const [isEditing, setIsEditing] = useState(false);
 
     // Form states
@@ -14,6 +14,34 @@ const Profile = () => {
     
     const [submitting, setSubmitting] = useState(false);
     const [toast, setToast] = useState(null);
+
+    // Change Password States
+    const [showChangePassword, setShowChangePassword] = useState(false);
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [changingPassword, setChangingPassword] = useState(false);
+
+    const handleChangePassword = async (e) => {
+        e.preventDefault();
+        if (newPassword !== confirmPassword) {
+            showToast('New passwords do not match!', 'error');
+            return;
+        }
+        setChangingPassword(true);
+        const res = await changePassword(currentPassword, newPassword);
+        setChangingPassword(false);
+
+        if (res.success) {
+            showToast('Password changed successfully!');
+            setCurrentPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+            setShowChangePassword(false);
+        } else {
+            showToast(res.message, 'error');
+        }
+    };
 
     const showToast = (message, type = 'success') => {
         setToast({ message, type });
@@ -112,6 +140,55 @@ const Profile = () => {
                             <Edit size={18} />
                             Edit Profile
                         </button>
+
+                        <button 
+                            type="button" 
+                            className="btn btn-secondary" 
+                            style={{ padding: '12px', marginTop: '8px' }}
+                            onClick={() => setShowChangePassword(!showChangePassword)}
+                        >
+                            <Shield size={18} />
+                            {showChangePassword ? 'Hide Password Options' : 'Change Account Password'}
+                        </button>
+
+                        {showChangePassword && (
+                            <form onSubmit={handleChangePassword} style={{ marginTop: '20px', borderTop: '1px solid var(--border-color)', paddingTop: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Current Password</label>
+                                    <input 
+                                        type="password" 
+                                        className="glass-input" 
+                                        value={currentPassword} 
+                                        onChange={(e) => setCurrentPassword(e.target.value)} 
+                                        required 
+                                    />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>New Password</label>
+                                    <input 
+                                        type="password" 
+                                        className="glass-input" 
+                                        value={newPassword} 
+                                        onChange={(e) => setNewPassword(e.target.value)} 
+                                        required 
+                                    />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Confirm New Password</label>
+                                    <input 
+                                        type="password" 
+                                        className="glass-input" 
+                                        value={confirmPassword} 
+                                        onChange={(e) => setConfirmPassword(e.target.value)} 
+                                        required 
+                                    />
+                                </div>
+                                <button type="submit" className="btn btn-primary" style={{ padding: '12px' }} disabled={changingPassword}>
+                                    <Save size={18} />
+                                    {changingPassword ? 'Updating Password...' : 'Update Password'}
+                                </button>
+                            </form>
+                        )}
                     </div>
                 ) : (
                     /* Edit Profile Form */
