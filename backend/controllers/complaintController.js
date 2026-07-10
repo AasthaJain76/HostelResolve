@@ -100,37 +100,42 @@ export const createComplaint = async (req, res) => {
                 `
             ).catch(err => console.error("Error sending complaint confirmation email in background:", err));
         }
-        // Notify wardens of this hostel
-        const wardens = await prisma.user.findMany({
-            where: {
-                role: 'warden',
-                hostel: hostel
-            }
-        });
-
-        for (const warden of wardens) {
-            await createNotificationHelper(
-                warden.id,
-                req.user.id,
-                'complaint_created',
-                complaint.id,
-                `New complaint raised: "${title}" in Room ${room}`
-            );
-        }
-
-        // Notify student themselves
-        await createNotificationHelper(
-            req.user.id,
-            req.user.id,
-            'complaint_created',
-            complaint.id,
-            `Your complaint "${title}" has been successfully submitted.`
-        );
-
         res.status(201).json({
             success: true,
             data: complaint,
         });
+
+        // Notify wardens and student in the background
+        (async () => {
+            try {
+                const wardens = await prisma.user.findMany({
+                    where: {
+                        role: 'warden',
+                        hostel: hostel
+                    }
+                });
+
+                for (const warden of wardens) {
+                    await createNotificationHelper(
+                        warden.id,
+                        req.user.id,
+                        'complaint_created',
+                        complaint.id,
+                        `New complaint raised: "${title}" in Room ${room}`
+                    );
+                }
+
+                await createNotificationHelper(
+                    req.user.id,
+                    req.user.id,
+                    'complaint_created',
+                    complaint.id,
+                    `Your complaint "${title}" has been successfully submitted.`
+                );
+            } catch (err) {
+                console.error("Failed to notify in background of new complaint:", err);
+            }
+        })();
     } catch (error) {
         res.status(500).json({
             success: false,
@@ -611,36 +616,42 @@ export const addComment = async (req, res) => {
             comment.user.name
         );
 
-        // Notify other party
-        if (req.user.role === 'student') {
-            // Notify wardens
-            const wardens = await prisma.user.findMany({
-                where: { role: 'warden', hostel: complaint.hostel }
-            });
-            for (const warden of wardens) {
-                await createNotificationHelper(
-                    warden.id,
-                    req.user.id,
-                    'new_comment',
-                    complaint.id,
-                    `New comment on "${complaint.title}" from student`
-                );
-            }
-        } else {
-            // Notify student
-            await createNotificationHelper(
-                complaint.createdById,
-                req.user.id,
-                'new_comment',
-                complaint.id,
-                `Warden commented on your complaint: "${complaint.title}"`
-            );
-        }
-
         res.status(201).json({
             success: true,
             data: comment
         });
+
+        // Notify other party in the background
+        (async () => {
+            try {
+                if (req.user.role === 'student') {
+                    // Notify wardens
+                    const wardens = await prisma.user.findMany({
+                        where: { role: 'warden', hostel: complaint.hostel }
+                    });
+                    for (const warden of wardens) {
+                        await createNotificationHelper(
+                            warden.id,
+                            req.user.id,
+                            'new_comment',
+                            complaint.id,
+                            `New comment on "${complaint.title}" from student`
+                        );
+                    }
+                } else {
+                    // Notify student
+                    await createNotificationHelper(
+                        complaint.createdById,
+                        req.user.id,
+                        'new_comment',
+                        complaint.id,
+                        `Warden commented on your complaint: "${complaint.title}"`
+                    );
+                }
+            } catch (err) {
+                console.error("Failed to notify in background of new comment:", err);
+            }
+        })();
     } catch (error) {
         res.status(500).json({
             success: false,
