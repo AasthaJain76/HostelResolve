@@ -15,7 +15,7 @@ graph TD
     B -->|HTTPS REST API Port 443| D[Google Gmail API v1]
     D -->|SMTP Relay| E[Student/Warden Inbox]
     
-    subgraph Hosting Layer (Cloud)
+    subgraph "Hosting Layer (Cloud)"
         A -.->|Hosted on| Vercel[Vercel Serverless Platform]
         B -.->|Hosted on| Render[Render Web Service]
         C -.->|Hosted on| Neon[Neon Database Cloud]
