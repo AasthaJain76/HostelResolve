@@ -1,35 +1,37 @@
+import nodemailer from "nodemailer";
+
+const transporter = nodemailer.createTransport({
+    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false, // port 587 uses STARTTLS (secure upgrade)
+    // Force IPv4 to prevent connection timeouts on cloud routing (like Koyeb/Render)
+    family: 4, 
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+    },
+});
+
 export const sendEmail = async (to, subject, html) => {
     try {
-        const apiKey = process.env.BREVO_API_KEY;
-        const senderEmail = process.env.SENDER_EMAIL || "aasthajain7499@gmail.com";
+        const emailUser = process.env.EMAIL_USER;
+        const emailPass = process.env.EMAIL_PASS;
 
-        if (!apiKey) {
-            console.error("Brevo API Key is missing");
+        if (!emailUser || !emailPass) {
+            console.error("Gmail credentials are missing from environment variables");
             return;
         }
 
-        const response = await fetch("https://api.brevo.com/v3/smtp/email", {
-            method: "POST",
-            headers: {
-                "accept": "application/json",
-                "api-key": apiKey,
-                "content-type": "application/json"
-            },
-            body: JSON.stringify({
-                sender: { name: "ResolveHub", email: senderEmail },
-                to: [{ email: to }],
-                subject: subject,
-                htmlContent: html
-            })
+        await transporter.sendMail({
+            from: `"ResolveHub" <${emailUser}>`,
+            to,
+            subject,
+            html,
         });
 
-        const data = await response.json();
-        if (response.ok) {
-            console.log(`Email successfully sent to ${to} via Brevo API:`, data.messageId);
-        } else {
-            console.error("Brevo API error:", data);
-        }
+        console.log(`Email successfully sent to ${to} via Gmail SMTP`);
     } catch (error) {
-        console.error("Email sending failed via Brevo API:", error);
+        console.error("Email sending failed via Gmail SMTP:", error);
     }
 };
