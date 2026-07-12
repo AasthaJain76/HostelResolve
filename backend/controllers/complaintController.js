@@ -178,8 +178,20 @@ export const getComplaints = async (req, res) => {
             ];
         }
 
+        // Pagination parameters
+        const pageNum = parseInt(req.query.page) || 1;
+        const limitNum = parseInt(req.query.limit) || 10;
+        const skipNum = (pageNum - 1) * limitNum;
+
+        // Get total count matching criteria
+        const totalItems = await prisma.complaint.count({
+            where: whereClause
+        });
+
         const complaints = await prisma.complaint.findMany({
             where: whereClause,
+            take: limitNum,
+            skip: skipNum,
             include: {
                 createdBy: {
                     select: { name: true, email: true, hostel: true, room: true }
@@ -196,7 +208,13 @@ export const getComplaints = async (req, res) => {
 
         res.json({
             success: true,
-            data: complaints
+            data: complaints,
+            pagination: {
+                page: pageNum,
+                limit: limitNum,
+                totalPages: Math.ceil(totalItems / limitNum),
+                totalItems
+            }
         });
     } catch (error) {
         res.status(500).json({
@@ -525,6 +543,17 @@ export const escalateComplaint = async (req, res) => {
 
         if (complaint.createdById !== req.user.id) {
             return res.status(403).json({ success: false, message: 'Not authorized to escalate this complaint' });
+        }
+
+        // Enforce 24-hour escalation cooldown
+        const timeDiff = Date.now() - new Date(complaint.createdAt).getTime();
+        const escalationCooldown = 24 * 60 * 60 * 1000; // 24 hours
+        if (timeDiff < escalationCooldown) {
+            const hoursRemaining = Math.ceil((escalationCooldown - timeDiff) / (1000 * 60 * 60));
+            return res.status(400).json({
+                success: false,
+                message: `Escalation is locked. You must wait 24 hours after creation. Please wait ${hoursRemaining} more hour(s).`
+            });
         }
 
         const updatedComplaint = await prisma.complaint.update({

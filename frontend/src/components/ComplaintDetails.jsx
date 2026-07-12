@@ -489,25 +489,55 @@ const ComplaintDetails = () => {
                     )}
 
                     {/* Student Escalation Panel */}
-                    {user?.role === 'student' && ['PENDING', 'IN_PROGRESS'].includes(complaint.status) && !complaint.isEscalated && (
-                        <div className="glass-panel" style={{ padding: '24px', marginBottom: '16px' }}>
-                            <h3 style={{ fontSize: '1.1rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <AlertTriangle size={20} color="var(--danger)" />
-                                Escalate to Admin?
-                            </h3>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                                If the Warden is not responding or taking too long to solve this issue, you can escalate this complaint directly to the Admin.
-                            </p>
-                            <button 
-                                className="btn btn-secondary" 
-                                style={{ width: '100%', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', border: '1px solid var(--danger-glow)' }}
-                                onClick={handleEscalate}
-                                disabled={submittingEscalate}
-                            >
-                                {submittingEscalate ? 'Escalating...' : 'Escalate Complaint'}
-                            </button>
-                        </div>
-                    )}
+                    {user?.role === 'student' && ['PENDING', 'IN_PROGRESS'].includes(complaint.status) && !complaint.isEscalated && (() => {
+                        const createdAtTime = new Date(complaint.createdAt).getTime();
+                        const escalationCooldown = 24 * 60 * 60 * 1000; // 24 hours
+                        const timePassed = Date.now() - createdAtTime;
+                        const isEscalationLocked = timePassed < escalationCooldown;
+                        const timeRemaining = escalationCooldown - timePassed;
+                        const hoursRemaining = Math.ceil(timeRemaining / (1000 * 60 * 60));
+                        const escalationDateStr = new Date(createdAtTime + escalationCooldown).toLocaleString();
+
+                        return (
+                            <div className="glass-panel" style={{ padding: '24px', marginBottom: '16px' }}>
+                                <h3 style={{ fontSize: '1.1rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <AlertTriangle size={20} color="var(--danger)" />
+                                    Escalate to Admin?
+                                </h3>
+                                {isEscalationLocked ? (
+                                    <>
+                                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: '1.5' }}>
+                                            To prevent premature escalations, you must wait at least <strong>24 hours</strong> after filing the complaint to allow the Warden time to respond.
+                                        </p>
+                                        <div style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '12px', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--danger)', marginBottom: '12px' }}>
+                                            Escalation unlocks on: <strong>{escalationDateStr}</strong> (approx. {hoursRemaining} hour(s) remaining).
+                                        </div>
+                                        <button 
+                                            className="btn btn-secondary" 
+                                            style={{ width: '100%', cursor: 'not-allowed', opacity: 0.5 }}
+                                            disabled
+                                        >
+                                            Escalate Locked
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                                            If the Warden is not responding or taking too long to solve this issue, you can escalate this complaint directly to the Admin.
+                                        </p>
+                                        <button 
+                                            className="btn btn-secondary" 
+                                            style={{ width: '100%', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', border: '1px solid var(--danger-glow)' }}
+                                            onClick={handleEscalate}
+                                            disabled={submittingEscalate}
+                                        >
+                                            {submittingEscalate ? 'Escalating...' : 'Escalate Complaint'}
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        );
+                    })()}
 
                     {/* Escalated Status Box */}
                     {user?.role === 'student' && complaint.isEscalated && (
