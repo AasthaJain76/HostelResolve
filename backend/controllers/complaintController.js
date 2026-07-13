@@ -2,8 +2,7 @@ import prisma from '../DB/db.config.js';
 import { createNotificationHelper } from './notificationController.js';
 import {sendEmail} from '../utils/sendEmail.js'
 
-// Helper to log audit trail events
-const logComplaintHistory = async (complaintId, action, details, performedBy) => {
+export const logComplaintHistory = async (complaintId, action, details, performedBy) => {
     try {
         await prisma.complaintHistory.create({
             data: {

@@ -1,5 +1,7 @@
 import prisma from '../DB/db.config.js';
 import bcrypt from 'bcrypt';
+import { logComplaintHistory } from './complaintController.js';
+import { sendEmail } from '../utils/sendEmail.js';
 
 // 1. Create Warden Account (Admin Only)
 export const createWarden = async (req, res) => {
@@ -84,7 +86,8 @@ export const resolveEscalatedComplaint = async (req, res) => {
         const complaintId = req.params.id;
 
         const complaint = await prisma.complaint.findUnique({
-            where: { id: complaintId }
+            where: { id: complaintId },
+            include: { createdBy: true }
         });
 
         if (!complaint) {
@@ -98,6 +101,37 @@ export const resolveEscalatedComplaint = async (req, res) => {
                 isEscalated: false // Unflag escalation once resolved
             }
         });
+
+        // Log history of Admin Resolution
+        const adminUser = await prisma.user.findUnique({
+            where: { id: req.user.id },
+            select: { name: true }
+        });
+
+        await logComplaintHistory(
+            complaintId,
+            'RESOLVED',
+            `Complaint resolved directly by Admin`,
+            adminUser?.name || 'Admin'
+        );
+
+        // Send Email notification to student in the background
+        if (complaint.createdBy && complaint.createdBy.email) {
+            const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+            const complaintLink = `${clientUrl}/complaint/${complaintId}`;
+
+            sendEmail(
+                complaint.createdBy.email,
+                `Escalated Complaint Resolved by Admin`,
+                `
+                <h2>Escalated Complaint Resolved</h2>
+                <p>Hello ${complaint.createdBy.name},</p>
+                <p>Your escalated complaint "<b>${complaint.title}</b>" has been reviewed and resolved directly by the Admin.</p>
+                <br/>
+                <a href="${complaintLink}" style="display: inline-block; padding: 10px 20px; color: white; background-color: #10b981; text-decoration: none; border-radius: 6px; font-weight: bold;">View Details</a>
+                `
+            ).catch(err => console.error("Failed to send Admin resolution email in background:", err));
+        }
 
         res.json({ success: true, message: 'Complaint resolved by Admin successfully', data: updatedComplaint });
     } catch (err) {
