@@ -919,8 +919,24 @@ export const reopenComplaint = async (req, res) => {
 
         const updatedComplaint = await prisma.complaint.update({
             where: { id: req.params.id },
-            data: { status: 'PENDING' } // Reopens back to PENDING status
+            data: { 
+                status: 'PENDING',
+                isEscalated: false // Reset escalation flag so it goes back to warden's queue
+            }
         });
+
+        // Log history of Reopening
+        const studentUser = await prisma.user.findUnique({
+            where: { id: req.user.id },
+            select: { name: true }
+        });
+
+        await logComplaintHistory(
+            req.params.id,
+            'REOPENED',
+            `Complaint reopened by student${reason ? `: "${reason}"` : ''}`,
+            studentUser?.name || 'Student'
+        );
 
         // Add reason as a system-like comment if reason is provided
         if (reason) {
