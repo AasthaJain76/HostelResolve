@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import jwt from 'jsonwebtoken';
 import prisma from '../DB/db.config.js'
 import rateLimit from "express-rate-limit";
+import { sendEmail } from '../utils/sendEmail.js';
 
 // Signup controller
 export const signup = async (req, res) => {
@@ -207,7 +208,98 @@ export const updateProfile = async (req, res) => {
     }
 }
 
-// Placeholder for forgotPassword and resetPassword
+// Forgot Password & Reset Password controllers
+export const forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        const user = await prisma.user.findUnique({
+            where: { email }
+        });
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "No account found with this email address"
+            });
+        }
+
+        // Generate a signed password reset token valid for 15 minutes
+        const resetToken = jwt.sign(
+            { id: user.id },
+            process.env.JWT_SECRET || process.env.ACCESS_TOKEN_SECRET,
+            { expiresIn: '15m' }
+        );
+
+        const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+        const resetLink = `${clientUrl}/reset-password?token=${resetToken}`;
+
+        // Send Email asynchronously in the background
+        sendEmail(
+            user.email,
+            "Password Reset Request",
+            `
+            <h2>Password Reset Request</h2>
+            <p>Hello ${user.name},</p>
+            <p>We received a request to reset your password. Click the link below to set a new password. This link is only valid for 15 minutes:</p>
+            <br/>
+            <a href="${resetLink}" style="display: inline-block; padding: 10px 20px; color: white; background-color: #ef4444; text-decoration: none; border-radius: 6px; font-weight: bold;">Reset Password</a>
+            <br/><br/>
+            <p>If you did not request a password reset, please ignore this email.</p>
+            `
+        ).catch(err => console.error("Failed to send reset email in background:", err));
+
+        return res.status(200).json({
+            success: true,
+            message: "Password reset link has been sent to your email"
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+export const resetPassword = async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+
+        if (!token) {
+            return res.status(400).json({
+                success: false,
+                message: "Reset token is required"
+            });
+        }
+
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET || process.env.ACCESS_TOKEN_SECRET);
+        } catch (err) {
+            return res.status(400).json({
+                success: false,
+                message: "The reset link is invalid or has expired"
+            });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        await prisma.user.update({
+            where: { id: decoded.id },
+            data: { password: hashedPassword }
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Password has been reset successfully. You can now log in with your new password."
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
 
 // Get all users
 export const getUsers = async (req, res) => {

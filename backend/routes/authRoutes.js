@@ -8,7 +8,9 @@ import {
     getProfile,
     updateProfile,
     changePassword,
-    getUsers
+    getUsers,
+    forgotPassword,
+    resetPassword
 } from '../controllers/authController.js'
 import { protect, authorize } from '../middlewares/auth.js'
 import { validate } from '../middlewares/validate.js'
@@ -21,6 +23,8 @@ router.post('/signup', signupValidation, validate, signup);
 router.post('/login', loginLimiter, loginValidation, validate, login);
 router.post("/refresh-token", refreshAccessToken);
 router.post("/logout", logout);
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
 router.get('/profile', protect, getProfile);
 router.put('/profile', protect, updateProfileValidation, validate, updateProfile);
 router.put('/profile/change-password', protect, changePassword);

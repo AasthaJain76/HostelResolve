@@ -25,6 +25,14 @@ const authService = {
         const res = await api.put('/auth/profile/change-password', { currentPassword, newPassword });
         return res.data;
     },
+    forgotPassword: async (email) => {
+        const res = await api.post('/auth/forgot-password', { email });
+        return res.data;
+    },
+    resetPassword: async (token, newPassword) => {
+        const res = await api.post('/auth/reset-password', { token, newPassword });
+        return res.data;
+    },
     getUsers: async () => {
         const res = await api.get('/auth/users');
         return res.data;

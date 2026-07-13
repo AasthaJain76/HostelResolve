@@ -2,11 +2,37 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, Phone, Home, LogIn, UserPlus } from 'lucide-react';
+import authService from '../services/authService';
 
 const LoginRegister = () => {
     const [isLogin, setIsLogin] = useState(true);
     const { login, register } = useAuth();
     const navigate = useNavigate();
+
+    // Forgot Password States
+    const [isForgotPassword, setIsForgotPassword] = useState(false);
+    const [forgotEmail, setForgotEmail] = useState('');
+    const [submittingForgot, setSubmittingForgot] = useState(false);
+
+    const handleForgotSubmit = async (e) => {
+        e.preventDefault();
+        setSubmittingForgot(true);
+        setError('');
+        try {
+            const res = await authService.forgotPassword(forgotEmail);
+            setSubmittingForgot(false);
+            if (res.success) {
+                showToast('Reset email sent! Please check your inbox.');
+                setForgotEmail('');
+                setIsForgotPassword(false);
+            } else {
+                setError(res.message);
+            }
+        } catch (err) {
+            setSubmittingForgot(false);
+            setError(err.response?.data?.message || 'Failed to send reset link.');
+        }
+    };
 
     // Form inputs
     const [email, setEmail] = useState('');
@@ -59,6 +85,62 @@ const LoginRegister = () => {
             }
         }
     };
+
+    if (isForgotPassword) {
+        return (
+            <div className="auth-container">
+                <div className="glass-panel auth-card" style={{ maxWidth: '460px', width: '100%' }}>
+                    <h2 style={{ fontSize: '1.4rem', marginBottom: '12px', textAlign: 'center', color: 'var(--text-main)' }}>
+                        Forgot Password
+                    </h2>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '24px', textAlign: 'center', lineHeight: '1.5' }}>
+                        Enter your registered email address and we will email you a secure link to reset your password.
+                    </p>
+
+                    <form onSubmit={handleForgotSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Email Address</label>
+                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                <Mail size={16} style={{ position: 'absolute', left: '16px' }} color="var(--text-muted)" />
+                                <input 
+                                    type="email" 
+                                    className="glass-input" 
+                                    style={{ paddingLeft: '44px', width: '100%' }}
+                                    placeholder="name@domain.com" 
+                                    value={forgotEmail} 
+                                    onChange={(e) => setForgotEmail(e.target.value)} 
+                                    required 
+                                />
+                            </div>
+                        </div>
+
+                        {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem', textAlign: 'center' }}>{error}</p>}
+
+                        <button type="submit" className="btn btn-primary" style={{ padding: '12px', marginTop: '10px' }} disabled={submittingForgot}>
+                            <Mail size={18} />
+                            {submittingForgot ? 'Sending Link...' : 'Send Reset Link'}
+                        </button>
+
+                        <div style={{ textAlign: 'center', marginTop: '12px' }}>
+                            <button 
+                                type="button" 
+                                onClick={() => { setIsForgotPassword(false); setError(''); }}
+                                style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', fontSize: '0.9rem' }}
+                            >
+                                Back to Sign In
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                {toast && (
+                    <div className={`toast toast-${toast.type}`}>
+                        <span>{toast.message}</span>
+                    </div>
+                )}
+            </div>
+        );
+    }
 
     return (
         <div className="auth-container">
@@ -117,6 +199,17 @@ const LoginRegister = () => {
                                 required 
                             />
                         </div>
+                        {isLogin && (
+                            <div style={{ textAlign: 'right', marginTop: '2px' }}>
+                                <button 
+                                    type="button" 
+                                    onClick={() => { setIsForgotPassword(true); setError(''); }}
+                                    style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '0.82rem', cursor: 'pointer', textDecoration: 'underline' }}
+                                >
+                                    Forgot Password?
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     {!isLogin && (
