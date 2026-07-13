@@ -757,6 +757,19 @@ export const deleteComment = async (req, res) => {
             where: { id: req.params.commentId }
         });
 
+        // Log history of comment deletion
+        const deletingUser = await prisma.user.findUnique({
+            where: { id: req.user.id },
+            select: { name: true }
+        });
+
+        await logComplaintHistory(
+            req.params.id,
+            'COMMENT_DELETED',
+            `Comment deleted by ${req.user.role === 'warden' ? 'Warden' : 'Student'}`,
+            deletingUser?.name || 'Unknown'
+        );
+
         res.json({
             success: true,
             message: 'Comment deleted successfully'
