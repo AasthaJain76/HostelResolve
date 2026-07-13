@@ -385,6 +385,8 @@ export const logout = async (req, res) => {
         success: true,
         message: "Logged out successfully"
     });
+};
+
 // Change user password
 export const changePassword = async (req, res) => {
     try {
